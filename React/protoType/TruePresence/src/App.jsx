@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { mockDatabase, RoleSelectionPage, LoginPage, LoadingOverlay } from './components/common.jsx';
-import { StudentDashboardPage } from './components/StudentDashboard.jsx';
-import { FacultyDashboardPage } from './components/FacultyDashboard.jsx';
-import { AdminDashboardPage } from './components/AdminDashboard.jsx';
+import { StudentDashboardPage } from './components/studentDashBoard.jsx';
+import { FacultyDashboardPage } from './components/facultyDashBoard.jsx';
+import { AdminDashboardPage } from './components/adminDashBoard.jsx';
 
 // --- MAIN APP COMPONENT ---
 export default function App() {

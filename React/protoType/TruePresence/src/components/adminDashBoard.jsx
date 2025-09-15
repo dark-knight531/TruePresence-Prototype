@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SpinnerIcon } from './Common.jsx';
+import { SpinnerIcon } from './common.jsx';
 
 // --- ADMIN DASHBOARD COMPONENTS ---
 const AdminAnalyticsContent = ({ adminData }) => (

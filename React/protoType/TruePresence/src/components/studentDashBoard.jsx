@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { InfoIcon, CameraIcon, SpinnerIcon, ColorKeyModal } from './Common.jsx';
+import { InfoIcon, CameraIcon, SpinnerIcon, ColorKeyModal } from './common.jsx';
 
 // --- STUDENT DASHBOARD COMPONENTS ---
 const StudentDashboardContent = ({ studentData, onInfoClick }) => {

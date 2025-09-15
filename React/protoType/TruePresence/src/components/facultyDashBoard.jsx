@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { InfoIcon } from './Common.jsx';
+import { InfoIcon } from './common.jsx';
 
 // --- FACULTY DASHBOARD COMPONENTS ---
 const MyClassesContent = ({ facultyData }) => (
