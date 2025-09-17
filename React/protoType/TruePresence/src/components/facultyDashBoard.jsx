@@ -230,11 +230,18 @@ const TakeAttendanceContent = ({ facultyData, isDarkMode }) => {
 
     useEffect(() => {
         let interval;
-        if (sessionActive && markedStudents.length < mockFacultyData.allStudents[selectedSubject.code].length) {
+        if (
+            sessionActive &&
+            selectedSubject &&
+            markedStudents.length < (mockFacultyData.allStudents[selectedSubject.code]?.length || 0)
+        ) {
             interval = setInterval(() => {
                 setMarkedStudents(prev => {
-                    if (prev.length < mockFacultyData.allStudents[selectedSubject.code].length) {
-                        return [...prev, mockFacultyData.allStudents[selectedSubject.code][prev.length]];
+                    if (prev.length < (mockFacultyData.allStudents[selectedSubject.code]?.length || 0)) {
+                        return [
+                            ...prev,
+                            mockFacultyData.allStudents[selectedSubject.code][prev.length]
+                        ];
                     } else {
                         clearInterval(interval);
                         setSessionActive(false);
@@ -266,7 +273,7 @@ const TakeAttendanceContent = ({ facultyData, isDarkMode }) => {
 
     const startSession = () => {
         setMarkedStudents([]);
-        setSessionActive(true);
+        // setSessionActive(true);
         setTimer(parseInt(manualTime, 10));
     };
 
@@ -342,14 +349,22 @@ const TakeAttendanceContent = ({ facultyData, isDarkMode }) => {
                                 {String(Math.floor(timer / 60)).padStart(2, '0')}:{String(timer % 60).padStart(2, '0')}
                             </p>
                         </div>
-                        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Marked: ({markedStudents.length}/{mockFacultyData.allStudents[selectedSubject.code].length})</p>
+                        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            Marked: ({markedStudents.length}/{mockFacultyData.allStudents[selectedSubject.code]?.length || 0})
+                        </p>
                         <div className="h-64 overflow-y-auto space-y-2 pr-2 mt-4">
-                            {markedStudents.map((student, index) => (
-                                <div key={index} className={`flex items-center p-2 rounded-md animate-fade-in ${listClass}`}>
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-400 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                    <span>{student.name}</span>
-                                </div>
-                            ))}
+                            {markedStudents.length > 0 ? (
+                                markedStudents.map((student, index) => (
+                                    <div key={index} className={`flex items-center p-2 rounded-md animate-fade-in ${listClass}`}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-400 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        <span>{student.name}</span>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className={`text-center pt-20 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                    Waiting for students to mark attendance...
+                                </p>
+                            )}
                         </div>
                     </>
                 ) : (
@@ -385,14 +400,14 @@ const FacultyReportsContent = ({ facultyData, isDarkMode }) => {
                     </div>
                 ))}
             </div>
-            {selectedSubject && (
+            {/* {selectedSubject && (
                 <AttendanceReportModal 
                     subject={selectedSubject} 
                     students={mockFacultyData.allStudents[selectedSubject.code] || []}
                     onClose={() => setSelectedSubject(null)}
                     isDarkMode={isDarkMode}
                 />
-            )}
+            )} */}
         </div>
     );
 };
@@ -419,7 +434,7 @@ export const FacultyDashboardPage = ({ userData, onLogout, isDarkMode, toggleThe
                         <p className={`text-sm ${subheaderTextClass}`}>{facultyData.department}</p>
                     </div>
                     <button onClick={toggleTheme} className={`font-bold py-2 px-4 rounded-lg transition-colors duration-300 ${themeButtonClass}`}>
-                        {isDarkMode ? '☀️ Light' : '🌙 Dark'}
+                        {isDarkMode ? '☀️' : '🌙 '}
                     </button>
                     <button onClick={onLogout} className={`font-bold py-2 px-4 rounded-lg transition-colors duration-300 ${buttonClass}`}>Logout</button>
                 </div>

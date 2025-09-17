@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { mockDatabase, RoleSelectionPage, LoginPage, LoadingOverlay } from './components/common.jsx';
-import { StudentDashboardPage } from './components/studentDashBoard.jsx';
+import  { StudentDashboardPage }  from './components/studentDashBoard.jsx';
 import { FacultyDashboardPage } from './components/facultyDashBoard.jsx';
 import { AdminDashboardPage } from './components/adminDashBoard.jsx';
 import { updateMockDatabase } from './components/common.jsx';
