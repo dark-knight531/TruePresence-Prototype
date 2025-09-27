@@ -100,28 +100,28 @@ const StudentDashboardContent = ({ studentData, onInfoClick, isDarkMode }) => {
                         </div>
                     )}
                     {viewMode === 'bar' && (
-                         <div className="p-4 bg-gray-900/50 rounded-lg">
-                            <Bar 
-                                data={getSubjectBreakdownData(studentData.subjects)}
-                                options={{
-                                    plugins: { legend: { display: false } },
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    scales: {
-                                        y: {
-                                            beginAtZero: true,
-                                            max: 100,
-                                            ticks: { color: isDarkMode ? '#d1d5db' : '#4b5563' },
-                                            grid: { color: isDarkMode ? '#374151' : '#e5e7eb' }
-                                        },
-                                        x: {
-                                            ticks: { color: isDarkMode ? '#d1d5db' : '#4b5563' },
-                                            grid: { color: isDarkMode ? '#374151' : '#e5e7eb' }
+                            <div className="p-4 bg-gray-900/50 rounded-lg">
+                                <Bar 
+                                    data={getSubjectBreakdownData(studentData.subjects)}
+                                    options={{
+                                        plugins: { legend: { display: false } },
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        scales: {
+                                            y: {
+                                                beginAtZero: true,
+                                                max: 100,
+                                                ticks: { color: isDarkMode ? '#d1d5db' : '#4b5563' },
+                                                grid: { color: isDarkMode ? '#374151' : '#e5e7eb' }
+                                            },
+                                            x: {
+                                                ticks: { color: isDarkMode ? '#d1d5db' : '#4b5563' },
+                                                grid: { color: isDarkMode ? '#374151' : '#e5e7eb' }
+                                            }
                                         }
-                                    }
-                                }}
-                            />
-                        </div>
+                                    }}
+                                />
+                            </div>
                     )}
                 </div>
 
@@ -194,39 +194,111 @@ const StudentDashboardContent = ({ studentData, onInfoClick, isDarkMode }) => {
     );
 };
 
+// ----------------------------------------------------------------------
+// MARK ATTENDANCE CONTENT (CORRECTED)
+// ----------------------------------------------------------------------
+
 const MarkAttendanceContent = ({ studentData, onAttendanceMarked, isDarkMode }) => {
-    const [status, setStatus] = useState('IDLE');
+    const [status, setStatus] = useState('IDLE'); // IDLE, LOADING, CAMERA_ON, SCANNING, SUCCESS, ERROR
     const [statusMessage, setStatusMessage] = useState('Camera is off');
     const [selectedSubject, setSelectedSubject] = useState(null);
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
+    const streamRef = useRef(null); // To hold the media stream for cleanup
+
+    const stopCamera = () => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
+        }
+        if (canvasRef.current) {
+            const ctx = canvasRef.current.getContext('2d');
+            // Clear the canvas, removing any bounding boxes or temporary snapshots
+            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); 
+        }
+        setStatus('IDLE');
+        setStatusMessage('Camera is off');
+    };
+
+    useEffect(() => {
+        // Cleanup function: stop camera on component unmount
+        return () => {
+            stopCamera();
+        };
+    }, []);
 
     const startCamera = async () => {
+        stopCamera(); // Ensure previous stream is stopped
         setStatusMessage('Starting camera...');
-        setStatus('CAMERA_ON');
-        setTimeout(() => {
-            setStatusMessage('Please keep your face within the frame.');
-            if (canvasRef.current) {
-                const ctx = canvasRef.current.getContext('2d');
-                ctx.strokeStyle = '#0ea5e9';
-                ctx.lineWidth = 4;
-                ctx.strokeRect(100, 50, 440, 380);
+        setStatus('LOADING'); 
+
+        try {
+            // Access the user's camera
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            streamRef.current = stream; 
+
+            if (videoRef.current) {
+                // Attach the stream to the video element
+                videoRef.current.srcObject = stream;
+                await videoRef.current.play();
+
+                // Update status and draw the frame
+                setStatus('CAMERA_ON');
+                setStatusMessage('Please keep your face within the frame.');
+
+                if (canvasRef.current && videoRef.current) {
+                    const ctx = canvasRef.current.getContext('2d');
+                    // Set canvas dimensions to match the displayed size
+                    canvasRef.current.width = videoRef.current.offsetWidth;
+                    canvasRef.current.height = videoRef.current.offsetHeight;
+                    
+                    // Draw simulated face detection bounding box
+                    ctx.strokeStyle = '#0ea5e9';
+                    ctx.lineWidth = 4;
+                    const canvasWidth = canvasRef.current.width;
+                    const canvasHeight = canvasRef.current.height;
+                    ctx.strokeRect(canvasWidth * 0.1, canvasHeight * 0.1, canvasWidth * 0.8, canvasHeight * 0.8);
+                }
             }
-        }, 1500);
+        } catch (err) {
+            console.error("Error accessing camera: ", err);
+            setStatus('ERROR');
+            setStatusMessage('Error: Could not access camera. Please check permissions.');
+            setTimeout(() => setStatus('IDLE'), 5000); 
+        }
     };
 
     const handleMarkPresence = () => {
-        if (!selectedSubject) return;
+        // Only allow marking if the camera is active
+        if (!selectedSubject || status !== 'CAMERA_ON') return;
 
         setStatus('SCANNING');
         setStatusMessage('Verifying face...');
+
+        // CRITICAL FIX: The camera (video element) is NOT stopped here, it continues running.
+
+        // Optional: Take a snapshot onto the canvas to simulate a capture moment
+        if (videoRef.current && canvasRef.current) {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d');
+            
+            // Clear bounding box and draw a snapshot for effect (optional)
+            ctx.clearRect(0, 0, canvas.width, canvas.height); 
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        }
+
+        // Simulate the facial recognition process delay
         setTimeout(() => {
+            // After successful verification, stop the camera stream
+            stopCamera(); 
+            
             setStatus('SUCCESS');
             setStatusMessage(`Success! Attendance marked for ${selectedSubject.name}.`);
-            if (canvasRef.current) {
-                const ctx = canvasRef.current.getContext('2d');
-                ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-            }
+            // onAttendanceMarked should be called here in a real app
         }, 3000);
     };
 
@@ -236,6 +308,8 @@ const MarkAttendanceContent = ({ studentData, onAttendanceMarked, isDarkMode }) 
     const textClass = isDarkMode ? 'text-gray-500' : 'text-gray-400';
     const buttonClass = isDarkMode ? 'bg-sky-600 hover:bg-sky-700 text-white disabled:bg-gray-600' : 'bg-sky-600 hover:bg-sky-700 text-white disabled:bg-gray-400';
     const listClass = isDarkMode ? 'bg-gray-700/50' : 'bg-gray-200';
+
+    const isVideoActive = (status === 'CAMERA_ON' || status === 'SCANNING');
 
     return (
         <div className={`card backdrop-blur-sm border rounded-2xl p-8 shadow-lg max-w-2xl mx-auto text-center ${cardClass}`}>
@@ -248,7 +322,11 @@ const MarkAttendanceContent = ({ studentData, onAttendanceMarked, isDarkMode }) 
                 {studentData.subjects.map(subject => (
                     <button 
                         key={subject.code} 
-                        onClick={() => setSelectedSubject(subject)} 
+                        onClick={() => {
+                            setSelectedSubject(subject);
+                            // Stop camera if subject changes while camera is active
+                            if (status !== 'IDLE') stopCamera(); 
+                        }} 
                         className={`w-full text-left p-4 rounded-lg transition-colors duration-300 ${listClass} ${selectedSubject?.code === subject.code ? 'border-2 border-sky-500' : 'border-2 border-transparent'}`}
                         disabled={!subject.liveAttendance}
                     >
@@ -262,11 +340,22 @@ const MarkAttendanceContent = ({ studentData, onAttendanceMarked, isDarkMode }) 
                 <>
                     <h3 className={`text-xl font-bold mb-4 ${titleClass}`}>Live Session for: {selectedSubject.name}</h3>
                     <div className={`relative w-full h-64 rounded-lg flex items-center justify-center border-2 border-dashed mb-6 overflow-hidden ${inputClass}`}>
-                        <video ref={videoRef} playsInline className="absolute top-0 left-0 w-full h-full object-cover scale-x-[-1] hidden"></video>
+                        
+                        {/* Video element remains visible during CAMERA_ON and SCANNING */}
+                        <video 
+                            ref={videoRef} 
+                            playsInline 
+                            className="absolute top-0 left-0 w-full h-full object-cover scale-x-[-1]" 
+                            style={{ display: isVideoActive ? 'block' : 'none' }}
+                        ></video>
+                        
+                        {/* The canvas is for drawing the bounding box/overlays */}
                         <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full" width="640" height="480"></canvas>
                         
-                        {status === 'IDLE' && (<div><CameraIcon isDarkMode={isDarkMode} /><p className={`mt-2 ${textClass}`}>Camera is off</p></div>)}
-                        {status === 'SCANNING' && (<div className="text-center z-10"><SpinnerIcon /><p className="text-sky-500 mt-4">Verifying...</p></div>)}
+                        {/* Status overlays */}
+                        {(status === 'IDLE' || status === 'ERROR') && (<div><CameraIcon isDarkMode={isDarkMode} /><p className={`mt-2 ${textClass}`}>{statusMessage}</p></div>)}
+                        {status === 'LOADING' && (<div className="text-center z-10"><SpinnerIcon /><p className="text-sky-500 mt-4">Activating Camera...</p></div>)}
+                        {status === 'SCANNING' && (<div className="text-center absolute z-20"><SpinnerIcon /><p className="text-sky-500 mt-4">Verifying...</p></div>)}
                         {status === 'SUCCESS' && (<div className="text-center z-10"><svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-green-500 mx-auto" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg><p className="text-green-500 mt-4">Attendance Marked!</p></div>)}
                     </div>
 
@@ -275,11 +364,11 @@ const MarkAttendanceContent = ({ studentData, onAttendanceMarked, isDarkMode }) 
                     </p>
 
                     <button
-                        onClick={status === 'IDLE' || status === 'SUCCESS' ? startCamera : handleMarkPresence}
-                        disabled={!selectedSubject || status === 'SCANNING'}
+                        onClick={isVideoActive ? handleMarkPresence : startCamera}
+                        disabled={!selectedSubject || status === 'SCANNING' || status === 'LOADING'}
                         className={`w-full mt-2 font-bold py-3 px-4 rounded-lg transition-colors duration-300 text-lg disabled:cursor-not-allowed ${buttonClass}`}
                     >
-                        {status === 'IDLE' || status === 'SUCCESS' ? 'Start Camera' : 'Mark Presence'}
+                        {status === 'IDLE' || status === 'SUCCESS' || status === 'ERROR' ? 'Start Camera' : status === 'CAMERA_ON' ? 'Mark Presence' : 'Processing...'}
                     </button>
                 </>
             )}
